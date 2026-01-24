@@ -11,9 +11,9 @@ By using the Onion-Pipe community relay network, you get a persistent, encrypted
 
 ## 🛠️ Rapid Setup (Docker Compose)
 
-Establish your secure tunnel in seconds. First, generate your keys:
+Establish your secure tunnel in seconds. First, generate your E2EE keys:
 ```bash
-docker run --rm -v $(pwd)/onion_keys:/keys sapphive/onion-pipe init
+docker run --rm -v "$(pwd)/registration:/registration" sapphive/onion-pipe init
 ```
 
 Then, use the following `docker-compose.yml`:
@@ -24,10 +24,11 @@ services:
     image: sapphive/onion-pipe:latest
     container_name: webhook-gateway
     environment:
-      - FORWARD_DEST=http://host.docker.internal:8080  # Local endpoint that receives webhook payloads
-      - API_TOKEN=your_api_token_here                # Get this from onion-pipe.sapphive.com
+      - FORWARD_DEST=http://host.docker.internal:8080  # Local endpoint
+      - API_TOKEN=your_api_token_here                # Get from dashboard
     volumes:
-      - ./onion_keys:/var/lib/tor/hidden_service
+      - ./registration:/registration                 # End-to-End Encryption Keys
+      - ./onion_id:/var/lib/tor/hidden_service       # Persists your .onion address
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
@@ -60,27 +61,33 @@ Note: `FORWARD_DEST` should point to the local HTTP endpoint that will receive d
 Sign in at [onion-pipe.sapphive.com](https://onion-pipe.sapphive.com) (or your own self-hosted Master) to get your **API Key**.
 
 ### Step 2: Establish the Tunnel (Docker)
-Run the client container locally. This acts as the "exit point" for your webhooks.
+1. **Initialize Keys**: Run once to setup your encryption identity:
+   ```bash
+   docker run --rm -v "$(pwd)/registration:/registration" sapphive/onion-pipe init
+   ```
 
+2. **Start the Service**:
 ```yaml
 services:
   onion-pipe:
     image: sapphive/onion-pipe:latest
     environment:
-      # WHERE should the webhook go when it reaches your machine?
-      # Example: http://localhost:8080/webhooks
       - FORWARD_DEST=http://host.docker.internal:8080
+      - API_TOKEN=your_api_token
     volumes:
-      - ./onion_keys:/var/lib/tor/hidden_service  # Keeps your address permanent
+      - ./registration:/registration
+      - ./onion_id:/var/lib/tor/hidden_service
     extra_hosts:
       - "host.docker.internal:host-gateway"
     restart: always
 ```
 
 ### Step 3: Register your Address
-Once the container starts, it generates a unique `.onion` address. You must link this address to your account so the relay knows where to send your traffic.
-- Use the **Dashboard UI** to add your new `.onion` address.
-- Or use the **CLI**: `onion-pipe register <your-id>` (No .onion suffix).
+The container attempts to auto-register using your `API_TOKEN` if E2EE keys are present. If you need to trigger it manually:
+
+```bash
+docker exec -it webhook-gateway /entrypoint.sh register
+```
 
 ---
 

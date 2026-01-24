@@ -11,12 +11,10 @@
 
 ### 2. Launch the Client
 
-1. **Initialize Keys**: Run the following in your project folder:
+1. **Initialize Keys**: Run once on your host machine to generate your E2EE keypair:
    ```bash
-   docker run --rm -v $(pwd)/onion_keys:/keys sapphive/onion-pipe init
+   docker run --rm -v "$(pwd)/registration:/registration" sapphive/onion-pipe init
    ```
-
-````
 
 2. **Start Tunneling**: Save the following as `docker-compose.yml` and run `docker compose up -d`:
 
@@ -28,10 +26,11 @@ services:
       - FORWARD_DEST="http://host.docker.internal:3000"
       - API_TOKEN="your_api_token_here"
     volumes:
-      - ./onion_keys:/var/lib/tor/hidden_service
+      - ./registration:/registration
+      - ./onion_id:/var/lib/tor/hidden_service
     extra_hosts:
       - "host.docker.internal:host-gateway"
-````
+```
 
 ### 3. Link your Tunnel
 
